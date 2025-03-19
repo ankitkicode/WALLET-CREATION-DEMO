@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import axiosInstance from "../services/axiosInstance";
+import ENDPOINTS from "../services/endpoints";
 
 const Popup = () => {
     const [loading, setLoading] = useState(false);
@@ -12,8 +14,9 @@ const Popup = () => {
         setError("");
 
         try {
-            const res = await fetch("http://localhost:5000/create-wallet", { method: "POST" });
-            const data = await res.json();
+            const res = await axiosInstance.post(ENDPOINTS.WALLET.CREATE);
+            const data = res.data;
+            console.log("Data:", data);
 
             if (data && data.mnemonic && data.address) {
                 navigate("/mnemonic", { state: { mnemonic: data.mnemonic, wallet: data } });
