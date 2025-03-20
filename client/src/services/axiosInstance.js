@@ -1,30 +1,31 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:5000",  // Change this to your API server URL
+  baseURL: "http://localhost:5000", // Change this to your API server URL
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true, // ✅ Allow sending cookies with requests
 });
 
-// Request Interceptor
-axiosInstance.interceptors.request.use(
-  (config) => {
-    // If you need to attach auth tokens, add them here
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response Interceptor
+// ✅ Response Interceptor - Handle Auth Errors
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("API Error:", error.response?.data || error.message);
+    if (error.response) {
+      const { status } = error.response;
+
+      if (status === 401) {
+        console.warn("Session expired! Redirecting to login...");
+        window.location.href = "/login"; // Redirect to login page
+      } else if (status === 403) {
+        console.error("Forbidden: You don't have permission.");
+      } else if (status >= 500) {
+        console.error("Server error! Try again later.");
+      }
+    } else {
+      console.error("Network error! Check your internet connection.");
+    }
     return Promise.reject(error);
   }
 );

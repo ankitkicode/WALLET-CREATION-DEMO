@@ -1,23 +1,44 @@
 const Wallet = require("../models/Wallet");
 const { ethers } = require("ethers");
 const Web3 = require("web3");
+const secretKey = process.env.SECRET_KEY;
+
 
 // Create Wallet
+const encryptPrivateKey = (privateKey) => {
+    const cipher = crypto.createCipher("aes-256-ctr", secretKey);
+    let encrypted = cipher.update(privateKey, "utf8", "hex");
+    encrypted += cipher.final("hex");
+    return encrypted;
+};
+
 exports.createWallet = async (req, res) => {
     try {
         const wallet = ethers.Wallet.createRandom();
-
+        
         const newWallet = new Wallet({
             address: wallet.address,
-            privateKey: wallet.privateKey,
+            privateKey: encryptPrivateKey(wallet.privateKey), // Secure Private Key
             mnemonic: wallet.mnemonic.phrase,
             balance: 0,
             importMethod: "generated"
         });
 
         await newWallet.save();
+
+        const token = jwt.sign({ 
+            address: wallet.address, 
+            mnemonic: wallet.mnemonic.phrase 
+          }, process.env.JWT_SECRET, { expiresIn: "2h" });
+      
+          res.cookie("walletSession", token, {
+            httpOnly: true, // Protect from XSS
+            secure: true,   // Only over HTTPS
+            sameSite: "Strict"
+          });
         res.json({ address: wallet.address, mnemonic: wallet.mnemonic.phrase });
     } catch (error) {
+        console.error("Wallet Creation Error:", error);
         res.status(500).json({ error: "Wallet creation failed!" });
     }
 };
